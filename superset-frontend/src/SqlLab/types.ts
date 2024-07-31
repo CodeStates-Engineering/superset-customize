@@ -111,6 +111,7 @@ export type SqlLabRootState = {
     editorTabLastUpdatedAt: number;
     lastUpdatedActiveTab: string;
     destroyedQueryEditors: Record<string, number>;
+    exportToken?: string;
   };
   localStorageUsageInKilobytes: number;
   messageToasts: toastState[];

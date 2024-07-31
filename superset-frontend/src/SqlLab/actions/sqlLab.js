@@ -105,6 +105,9 @@ export const SET_EDITOR_TAB_LAST_UPDATE = 'SET_EDITOR_TAB_LAST_UPDATE';
 export const SET_LAST_UPDATED_ACTIVE_TAB = 'SET_LAST_UPDATED_ACTIVE_TAB';
 export const CLEAR_DESTROYED_QUERY_EDITOR = 'CLEAR_DESTROYED_QUERY_EDITOR';
 
+export const TOKEN_SUCCESS = 'TOKEN_SUCCESS';
+export const TOKEN_FAILED = 'TOKEN_FAILED';
+
 export const addInfoToast = addInfoToastAction;
 export const addSuccessToast = addSuccessToastAction;
 export const addDangerToast = addDangerToastAction;
@@ -252,6 +255,18 @@ export function querySuccess(query, results) {
   return { type: QUERY_SUCCESS, query, results };
 }
 
+export function tokenSuccess(exportToken) {
+  return function (dispatch) {
+    dispatch({ type: TOKEN_SUCCESS, exportToken });
+  };
+}
+
+export function tokenFailed(message) {
+  return function (dispatch) {
+    dispatch({ type: TOKEN_FAILED, message });
+  };
+}
+
 export function queryFailed(query, msg, link, errors) {
   return function (dispatch) {
     const eventData = {
@@ -318,6 +333,25 @@ export function fetchQueryResults(query, displayLimit) {
           return dispatch(
             queryFailed(query, message, error.link, error.errors),
           );
+        }),
+      );
+  };
+}
+
+export function getExportToken(clientId) {
+  return function (dispatch) {
+    return SupersetClient.get({
+      endpoint: `/api/v1/sqllab/export/token/${clientId}/`,
+      parseMethod: 'json-bigint',
+    })
+      .then(({ json }) => dispatch(tokenSuccess(json.token)))
+      .catch(response =>
+        getClientErrorObject(response).then(error => {
+          const message =
+            error.error ||
+            error.statusText ||
+            t('Failed at retrieving results');
+          return dispatch(tokenFailed(message));
         }),
       );
   };

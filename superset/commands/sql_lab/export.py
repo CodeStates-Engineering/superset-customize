@@ -50,8 +50,10 @@ class SqlResultExportCommand(BaseCommand):
     def __init__(
         self,
         client_id: str,
+        is_token_request: bool = False,
     ) -> None:
         self._client_id = client_id
+        self._is_token_request = is_token_request
 
     def validate(self) -> None:
         self._query = (
@@ -71,16 +73,17 @@ class SqlResultExportCommand(BaseCommand):
             )
 
         try:
-            self._query.raise_for_access()
-        except SupersetSecurityException as ex:
-            raise SupersetErrorException(
-                SupersetError(
-                    message=__("Cannot access the query"),
-                    error_type=SupersetErrorType.QUERY_SECURITY_ACCESS_ERROR,
-                    level=ErrorLevel.ERROR,
-                ),
-                status=403,
-            ) from ex
+            self._query.raise_for_access(self._is_token_request)
+        except SupersetErrorException as ex:
+            if not self._is_token_request:
+                raise SupersetErrorException(
+                    SupersetError(
+                        message=__("Cannot access the query"),
+                        error_type=SupersetErrorType.QUERY_SECURITY_ACCESS_ERROR,
+                        level=ErrorLevel.ERROR,
+                    ),
+                    status=403,
+                ) from ex
 
     def run(
         self,

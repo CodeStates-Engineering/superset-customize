@@ -263,14 +263,14 @@ class Query(
             "verbose_map": {},
         }
 
-    def raise_for_access(self) -> None:
+    def raise_for_access(self, is_token_request: bool = False) -> None:
         """
         Raise an exception if the user cannot access the resource.
 
         :raises SupersetSecurityException: If the user cannot access the resource
         """
 
-        security_manager.raise_for_access(query=self)
+        security_manager.raise_for_access(query=self, from_token=is_token_request)
 
     @property
     def db_engine_spec(

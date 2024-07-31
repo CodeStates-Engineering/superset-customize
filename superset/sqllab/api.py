@@ -61,6 +61,8 @@ from superset.sqllab.sqllab_execution_context import SqlJsonExecutionContext
 from superset.sqllab.utils import bootstrap_sqllab_data
 from superset.sqllab.validators import CanAccessQueryValidatorImpl
 from superset.superset_typing import FlaskResponse
+from superset.security import AESCipher
+from superset.config import SECRET_KEY
 from superset.utils import core as utils, json
 from superset.views.base import CsvResponse, generate_download_headers, json_success
 from superset.views.base_api import BaseSupersetApi, requires_json, statsd_metrics
@@ -293,6 +295,66 @@ class SqlLabRestApi(BaseSupersetApi):
             "CSV exported: %s", event_rep, extra={"superset_event": event_info}
         )
         return response
+
+    @expose("/export/token/<string:client_id>/")
+    @protect()
+    @statsd_metrics
+    @event_logger.log_this_with_context(
+        action=lambda self, *args, **kwargs: f"{self.__class__.__name__}"
+                                             f".export_csv_token",
+        log_to_statsd=False,
+    )
+    def get_export_token(self, client_id) -> FlaskResponse:
+        cipher = AESCipher(SECRET_KEY)
+        encrypt = cipher.encrypt(client_id)
+
+        return self.response(200, **{
+            'token': encrypt.decode('utf-8')
+        })
+
+    @expose("/export/<string:client_id>/<string:token>")
+    @statsd_metrics
+    @event_logger.log_this_with_context(
+        action=lambda self, *args, **kwargs: f"{self.__class__.__name__}"
+                                             f".export_csv_with_token",
+        log_to_statsd=False,
+    )
+    def export_csv_from_token(self, client_id: str, token: str) -> CsvResponse:
+        try:
+            cipher = AESCipher(SECRET_KEY)
+            decrypt = cipher.decrypt(token)
+            if decrypt.decode('utf-8') == client_id:
+                result = SqlResultExportCommand(client_id=client_id, is_token_request=True).run()
+
+                query, data, row_count = result["query"], result["data"], result["count"]
+
+
+                quoted_csv_name = parse.quote(query.name)
+                response = CsvResponse(
+                    data, headers=generate_download_headers("csv", quoted_csv_name)
+                )
+                event_info = {
+                    "event_type": "data_export",
+                    "client_id": client_id,
+                    "row_count": row_count,
+                    "database": query.database.name,
+                    "schema": query.schema,
+                    "sql": query.sql,
+                    "exported_format": "csv",
+                }
+                event_rep = repr(event_info)
+                logger.debug(
+                    "CSV exported: %s", event_rep, extra={"superset_event": event_info}
+                )
+                return response
+            else:
+                return self.response(401, {
+                    "msg": "Token required"
+                })
+        except:
+            return self.response(400, {
+                "msg": "Invalid token"
+            })
 
     @expose("/results/")
     @protect()

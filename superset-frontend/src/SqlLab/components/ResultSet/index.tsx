@@ -67,6 +67,7 @@ import {
   clearQueryResults,
   CtasEnum,
   fetchQueryResults,
+  getExportToken,
   reFetchQueryResults,
   reRunQuery,
 } from 'src/SqlLab/actions/sqlLab';
@@ -167,6 +168,10 @@ const ResultSet = ({
   defaultQueryLimit,
 }: ResultSetProps) => {
   const user = useSelector(({ user }: SqlLabRootState) => user, shallowEqual);
+  const exportToken = useSelector(
+    ({ sqlLab: { exportToken } }: SqlLabRootState) => exportToken,
+    shallowEqual,
+  );
   const query = useSelector(
     ({ sqlLab: { queries } }: SqlLabRootState) =>
       pick(queries[queryId], [
@@ -206,6 +211,7 @@ const ResultSet = ({
   const [cachedData, setCachedData] = useState<Record<string, unknown>[]>([]);
   const [showSaveDatasetModal, setShowSaveDatasetModal] = useState(false);
   const [alertIsOpen, setAlertIsOpen] = useState(false);
+  const [exportUrl, setExportUrl] = useState('');
 
   const history = useHistory();
   const dispatch = useDispatch();
@@ -229,16 +235,26 @@ const ResultSet = ({
     dispatch(fetchQueryResults(q, displayLimit));
   };
 
+  const fetchToken = (clientId: string) => {
+    dispatch(getExportToken(clientId));
+  };
+
   const prevQuery = usePrevious(query);
   useEffect(() => {
     if (cache && query.cached && query?.results?.data?.length > 0) {
       setCachedData(query.results.data);
+      fetchToken(query.id);
       dispatch(clearQueryResults(query));
     }
     if (query.resultsKey && query.resultsKey !== prevQuery?.resultsKey) {
       fetchResults(query);
+      fetchToken(query.id);
     }
   }, [query, cache]);
+
+  useEffect(() => {
+    setExportUrl(`/api/v1/sqllab/export/${query.id}/${exportToken}`);
+  }, [exportToken]);
 
   const calculateAlertRefHeight = (alertElement: HTMLElement | null) => {
     if (alertElement) {
@@ -289,9 +305,6 @@ const ResultSet = ({
     }
   };
 
-  const getExportCsvUrl = (clientId: string) =>
-    `/api/v1/sqllab/export/${clientId}/`;
-
   const renderControls = () => {
     if (search || visualize || csv) {
       let { data } = query.results;
@@ -338,7 +351,7 @@ const ResultSet = ({
             {csv && canExportData && (
               <Button
                 buttonSize="small"
-                href={getExportCsvUrl(query.id)}
+                href={exportUrl}
                 data-test="export-csv-button"
                 onClick={() => logAction(LOG_ACTIONS_SQLLAB_DOWNLOAD_CSV, {})}
               >

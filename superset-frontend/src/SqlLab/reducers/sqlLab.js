@@ -704,6 +704,10 @@ export default function sqlLabReducer(state = {}, action) {
       }
       return { ...state, queries: newQueries, queriesLastUpdate };
     },
+    [actions.TOKEN_SUCCESS]() {
+      const { exportToken } = action;
+      return { ...state, exportToken };
+    },
     [actions.CLEAR_INACTIVE_QUERIES]() {
       const { queries } = state;
       const cleanedQueries = Object.fromEntries(

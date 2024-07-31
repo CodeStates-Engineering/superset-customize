@@ -346,7 +346,6 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
     def request_loader(self, request: Request) -> Optional[User]:
         # pylint: disable=import-outside-toplevel
         from superset.extensions import feature_flag_manager
-
         if feature_flag_manager.is_feature_enabled("EMBEDDED_SUPERSET"):
             return self.get_guest_user_from_request(request)
         return None
@@ -2143,6 +2142,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
         sql: Optional[str] = None,
         catalog: Optional[str] = None,
         schema: Optional[str] = None,
+        from_token: bool = False
     ) -> None:
         """
         Raise an exception if the user cannot access the resource.
@@ -2183,8 +2183,7 @@ class SupersetSecurityManager(  # pylint: disable=too-many-public-methods
                 database = query.database
 
             database = cast("Database", database)
-
-            if self.can_access_database(database):
+            if self.can_access_database(database) or from_token:
                 return
 
             if query:
