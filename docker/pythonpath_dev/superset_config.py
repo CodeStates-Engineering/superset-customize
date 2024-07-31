@@ -25,6 +25,27 @@ import os
 
 from celery.schedules import crontab
 from flask_caching.backends.filesystemcache import FileSystemCache
+from flask_appbuilder.security.manager import AUTH_OAUTH
+
+AUTH_TYPE = AUTH_OAUTH
+AUTH_ROLE_PUBLIC = 'Public'
+AUTH_USER_REGISTRATION = True
+OAUTH_PROVIDERS = [{
+    "name": "google",
+    "token_key": "access_token",
+    "icon": "fa-google",
+    "remote_app": {
+        "api_base_url": "https://www.googleapis.com/oauth2/v2/",
+        "client_kwargs": {
+            "scope": "email profile"
+        },
+        "access_token_url": "https://accounts.google.com/o/oauth2/token",
+        "authorize_url": "https://accounts.google.com/o/oauth2/auth",
+        "request_token_url": None,
+        "client_id": "",
+        "client_secret": ""
+    }
+}]
 
 logger = logging.getLogger()
 
@@ -92,9 +113,9 @@ class CeleryConfig:
 
 CELERY_CONFIG = CeleryConfig
 
-FEATURE_FLAGS = {"ALERT_REPORTS": True}
+FEATURE_FLAGS = {"ALERT_REPORTS": True, "SSH_TUNNELING": True}
 ALERT_REPORTS_NOTIFICATION_DRY_RUN = True
-WEBDRIVER_BASEURL = "http://superset:8088/"  # When using docker compose baseurl should be http://superset_app:8088/
+WEBDRIVER_BASEURL = "https://superset.codestates.xyz/"  # When using docker compose baseurl should be http://superset_app:8088/
 # The base URL for the email report hyperlinks.
 WEBDRIVER_BASEURL_USER_FRIENDLY = WEBDRIVER_BASEURL
 SQLLAB_CTAS_NO_LIMIT = True
